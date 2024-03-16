@@ -30,11 +30,11 @@ public class UserInterface : MonoBehaviour
     { computerComponentUI.transform.GetChild(0).GetComponent<TextMeshProUGUI>().text = name; }
 
     public void InitializeMinigameTimer()
-    { minigameUI.transform.GetChild(3).transform.GetChild(1).GetComponent<Image>().fillAmount = 1f; }
+    { minigameUI.transform.GetChild(2).transform.GetChild(1).GetComponent<Image>().fillAmount = 1f; }
 
     public void SetUserIntefaceActive(GameObject userInterface, bool value)
     { userInterface.SetActive(value); }
 
     public void UpdateMinigameTimer(int amountOfTime, int currentAmountOfTime)
-    { minigameUI.transform.GetChild(3).transform.GetChild(1).GetComponent<Image>().fillAmount = (float)1/currentAmountOfTime * amountOfTime; }
+    { minigameUI.transform.GetChild(2).transform.GetChild(1).GetComponent<Image>().fillAmount = (float)1/currentAmountOfTime * amountOfTime; }
 }

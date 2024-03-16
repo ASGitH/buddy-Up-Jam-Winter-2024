@@ -1,12 +1,22 @@
 using System.Collections;
 using System.Collections.Generic;
+using UnityEditorInternal;
 using UnityEngine;
+using static UnityEditor.Experimental.AssetDatabaseExperimental.AssetDatabaseCounters;
+
+//public class Note
+//{
+//    // Keep track of 
+//}
 
 public class Minigame : MonoBehaviour
 {
     #region Private
     private bool hasMinigameEnded, hasMinigameStarted;
     private bool hasTimerStopped;
+    private bool isGoingDown, isSlottingCPUIn;
+
+    private Computer computer;
 
     private float minigameTimerIntToFloat;
 
@@ -24,10 +34,12 @@ public class Minigame : MonoBehaviour
     private string minigame = "";
 
     private UserInterface userInterface;
+
+    private Vector3 CPUInitialPosition, CPUPositionToSlotFrom;
     #endregion
 
     #region Public
-    public bool hasFailedMinigame, hasPassedMinigame;
+    public bool hasPassedMinigame;
 
     public GameObject cameraGO;
     public GameObject screws;
@@ -37,6 +49,8 @@ public class Minigame : MonoBehaviour
     // Start is called before the first frame update
     void Start()
     {
+        computer = transform.parent.parent.GetChild(0).GetComponent<Computer>();
+
         minigameCamera = transform.GetChild(0).gameObject;
 
         userInterface = userInterfaceGO.GetComponent<UserInterface>();
@@ -46,11 +60,144 @@ public class Minigame : MonoBehaviour
     void Update()
     { PlayMinigame(minigame); }
 
+    private void CPUMinigame()
+    {
+        if (!hasMinigameStarted)
+        {
+            CPUInitialPosition = transform.parent.GetChild(1).position;
+
+            MinigameInitialization();
+
+            hasMinigameStarted = true;
+
+            isGoingDown = true;
+
+            minigameTimer = 8;
+            minigameTimerIntToFloat = minigameTimer;
+
+            initialMinigameTimer = minigameTimer;
+
+            transform.parent.GetChild(1).gameObject.SetActive(true);
+
+            userInterface.InitializeMinigameTimer();
+        }
+        else if (!hasTimerStopped)
+        {
+            if (!hasPassedMinigame)
+            {
+                //if (amountOfScrews == 0)
+                //{ hasPassedMinigame = true; }
+
+                if(!isSlottingCPUIn)
+                {
+                    if (!isGoingDown)
+                    {
+                        if (CPUInitialPosition.y - transform.parent.GetChild(1).position.y <= -0.75f)
+                        { isGoingDown = true; }
+                        else
+                        { transform.parent.GetChild(1).position -= (Vector3.down * Time.deltaTime) * 1.75f; }
+                    }
+                    else
+                    {
+                        if (CPUInitialPosition.y - transform.parent.GetChild(1).position.y >= 0.75f)
+                        { isGoingDown = false; }
+                        else
+                        { transform.parent.GetChild(1).position += (Vector3.down * Time.deltaTime) * 1.75f; }
+                    }
+                }
+                else
+                {
+                    if (Vector3.Distance(CPUPositionToSlotFrom, transform.parent.GetChild(1).position) < .75f)
+                    { transform.parent.GetChild(1).position -= new Vector3(1.75f * Time.deltaTime, 0f, -1.75f * Time.deltaTime); }
+                    else
+                    {
+                        if (CPUInitialPosition.y - CPUPositionToSlotFrom.y > -0.10f && CPUInitialPosition.y - CPUPositionToSlotFrom.y < 0f)
+                        { hasPassedMinigame = true; }
+                    }
+                }
+                
+                if (Input.GetMouseButtonDown(0))
+                {
+                    ray = Camera.main.ScreenPointToRay(Input.mousePosition);
+
+                    if (Physics.Raycast(ray, out hit))
+                    {
+                        if (hit.collider.gameObject.name == "CPU")
+                        {
+                            CPUPositionToSlotFrom = transform.parent.GetChild(1).position;
+
+                            isSlottingCPUIn = true; 
+                        }
+                    }
+                }
+            }
+
+            UpdateMinigameTimer();
+        }
+        else
+        {
+            cameraGO.SetActive(true);
+
+            computer.GetComponent<ComputerComponent>().isInMinigame = false;
+
+            hasMinigameStarted = false;
+
+            isSlottingCPUIn = false;
+
+            minigame = "";
+
+            minigameCamera.SetActive(false);
+
+            transform.parent.GetChild(1).gameObject.SetActive(false);
+            transform.parent.GetChild(1).position = CPUInitialPosition;
+            transform.parent.GetComponent<ComputerComponent>().isInMinigame = false;
+
+            userInterface.SetUserIntefaceActive(userInterface.minigameUI, false);
+
+            if (hasPassedMinigame)
+            { computer.SetComputerComponentInPlace(transform.parent.gameObject, "CPU"); }
+        }
+    }
+
+    private void GPUMinigame()
+    {
+        if (!hasMinigameStarted)
+        {
+            MinigameInitialization();
+
+            hasMinigameStarted = true;
+        }
+        else if (!hasPassedMinigame)
+        {
+            //
+        }
+        else
+        {
+            cameraGO.SetActive(true);
+
+            computer.GetComponent<ComputerComponent>().isInMinigame = false;
+
+            hasMinigameStarted = false;
+
+            minigame = "";
+
+            minigameCamera.SetActive(false);
+
+            transform.parent.GetComponent<ComputerComponent>().isInMinigame = false;
+
+            userInterface.SetUserIntefaceActive(userInterface.minigameUI, false);
+
+            if (hasPassedMinigame)
+            { computer.SetComputerComponentInPlace(transform.parent.gameObject, "GPU"); }
+        }
+    }
+
     private void MinigameInitialization()
     {
         cameraGO.SetActive(false);
 
-        hasFailedMinigame = false;
+        computer.GetComponent<ComputerComponent>().isInMinigame = true;
+
         hasMinigameEnded = false;
         hasMinigameStarted = false;
         hasPassedMinigame = false;
@@ -70,10 +217,10 @@ public class Minigame : MonoBehaviour
         {
             MinigameInitialization();
 
-            int amountOfScrewsToRemove;
+            //int amountOfScrewsToRemove;
 
             amountOfScrews = Random.Range(1, screws.transform.childCount / 4);
-            amountOfScrewsToRemove = screws.transform.childCount - amountOfScrews;
+            // amountOfScrewsToRemove = screws.transform.childCount - amountOfScrews;
 
             screwList = new List<int>();
             screwListPositions = new List<Vector3>();
@@ -105,9 +252,9 @@ public class Minigame : MonoBehaviour
 
             userInterface.InitializeMinigameTimer();
         }
-        else if(!hasFailedMinigame && !hasPassedMinigame)
+        else if(!hasTimerStopped)
         {
-            if(!hasTimerStopped)
+            if(!hasPassedMinigame)
             {
                 if(amountOfScrews == 0)
                 { hasPassedMinigame = true; }
@@ -134,15 +281,15 @@ public class Minigame : MonoBehaviour
                         }
                     }
                 }
-
-                UpdateMinigameTimer();
             }
-            else 
-            { hasFailedMinigame = true; }
+
+            UpdateMinigameTimer();
         }
         else
         {
             cameraGO.SetActive(true);
+
+            computer.GetComponent<ComputerComponent>().isInMinigame = false;
 
             for (int counter = 0; counter < screwList.Count; counter++)
             {
@@ -151,7 +298,6 @@ public class Minigame : MonoBehaviour
                 screws.transform.GetChild(screwList[counter]).gameObject.SetActive(false);
             }
 
-            hasMinigameEnded = true;
             hasMinigameStarted = false;
 
             minigame = "";
@@ -161,6 +307,9 @@ public class Minigame : MonoBehaviour
             transform.parent.GetComponent<ComputerComponent>().isInMinigame = false;
 
             userInterface.SetUserIntefaceActive(userInterface.minigameUI, false);
+
+            if(hasPassedMinigame)
+            { computer.SetComputerComponentInPlace(transform.parent.gameObject, "Motherboard"); }
         }
     }
 
@@ -170,6 +319,8 @@ public class Minigame : MonoBehaviour
         {
             switch (minigame)
             {
+                case "CPU": CPUMinigame(); break;
+                case "GPU": GPUMinigame(); break;
                 case "Motherboard": MotherboardMinigame(); break;
             }
         }
@@ -181,8 +332,6 @@ public class Minigame : MonoBehaviour
         {
             minigameTimer = (int)minigameTimerIntToFloat;
             minigameTimerIntToFloat -= Time.deltaTime;
-
-            Debug.Log(minigameTimer);
 
             userInterface.UpdateMinigameTimer(minigameTimer, initialMinigameTimer);
         }

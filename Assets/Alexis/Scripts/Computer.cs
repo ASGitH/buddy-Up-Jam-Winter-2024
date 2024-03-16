@@ -1,5 +1,6 @@
 using System.Collections;
 using System.Collections.Generic;
+using UnityEditor.SceneManagement;
 using UnityEngine;
 
 public class Computer : MonoBehaviour
@@ -11,12 +12,15 @@ public class Computer : MonoBehaviour
     #region Private
     private Animator animator;
 
-    //private bool isInPosition = false;
+    private bool isInFocus = false;
 
     private Transform initialCameraTransform, initialTransform;
     #endregion
 
     #region Public
+    // public bool hasCaseInstalled
+    public bool hasCPUBeenInstalled, hasGPUBeenInstalled, hasHardDriveBeenInstalled, hasMotherboardBeenInstalled, hasPSUBeenInstalled, hasRAMBeenInstalled;
+
     public UserInterface userInterfaceGameObject;
     #endregion
 
@@ -31,13 +35,39 @@ public class Computer : MonoBehaviour
 
     private void OnMouseDown()
     {
-        animator.enabled = false;
+        if(!isInFocus)
+        {
+            animator.enabled = false;
 
-        Camera.main.transform.Rotate(new Vector3(-22.5f, 0f, 0f));
+            Camera.main.transform.Rotate(new Vector3(-22.5f, 0f, 0f));
 
-        transform.position = new Vector3(0f, 2f, 0f);
-        transform.Rotate(0f, -45f, 0f);
+            isInFocus = true;
 
-        userInterfaceGameObject.SetUserIntefaceActive(userInterfaceGameObject.transparentBackground, true);
+            transform.position = new Vector3(0f, 2f, -1f);
+            transform.Rotate(0f, -45f, 0f);
+        }
+    }
+
+    private void OnMouseDrag()
+    {
+        if(isInFocus) 
+        { transform.Rotate(new Vector3(0f, -Input.GetAxis("Mouse X"), -Input.GetAxis("Mouse Y"))); }
+    }
+
+    public void SetComputerComponentInPlace(GameObject computerComponent, string component)
+    {
+        switch (component)
+        {
+            case "Motherboard":
+                if(!hasMotherboardBeenInstalled)
+                {
+                    hasMotherboardBeenInstalled = true;
+
+                    transform.GetChild(2).gameObject.SetActive(true);
+                }
+                break;
+        }
+
+        computerComponent.SetActive(false);
     }
 }
