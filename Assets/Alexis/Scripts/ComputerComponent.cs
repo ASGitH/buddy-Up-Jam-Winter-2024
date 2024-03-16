@@ -8,23 +8,25 @@ using UnityEngine.UIElements;
 [System.Serializable]
 public class ComputerComponent : MonoBehaviour
 {
-    // Goal: Making the Computer Hover when Highlighted by Cursor
-    // - Have computer quickly rise up when cursor over said object
-    // - Have the computer hover down/up as long as cursor is over said object
-    // - When not over computer, float back down into position
-
     #region Private
+    private Animator animator;
+
+    private BoxCollider componentBoxCollider;
+
     private MeshCollider componentCollider;
     private MeshRenderer componentRenderer;
 
-    private string componentName;
+    private Minigame minigameComponent;
 
-    private Transform originalTransform;
+    private string componentName;
     #endregion
 
     #region Public
     public bool canBeHighlighted;
     public bool canHover;
+    public bool expandCollider;
+    public bool hasMinigame, isInMinigame;
+    public bool highlightOverwrite;
 
     public UserInterface userInterfaceGameObject;
     #endregion
@@ -34,17 +36,27 @@ public class ComputerComponent : MonoBehaviour
     {
         Color randomColor = new Color(Random.value, Random.value, Random.value);
 
-        componentCollider = gameObject.AddComponent<MeshCollider>();
         componentName = gameObject.name;
         componentRenderer = gameObject.GetComponent<MeshRenderer>();
+        componentRenderer.material.EnableKeyword("_EMISSION");
 
-        componentCollider = gameObject.AddComponent<MeshCollider>();
-        componentName = gameObject.name;
-        componentRenderer = gameObject.GetComponent<MeshRenderer>();
         // Temporary line (below), to be removed
-        componentRenderer.material.color = randomColor;
+        // componentRenderer.material.color = randomColor;
+    
+        if(canHover)
+        { animator = GetComponent<Animator>(); }
 
-        originalTransform = gameObject.transform;
+        if (!expandCollider)
+        { componentCollider = gameObject.AddComponent<MeshCollider>(); }
+        else
+        { 
+            componentBoxCollider = gameObject.AddComponent<BoxCollider>();
+
+            componentBoxCollider.size *= 2;
+        }
+
+        if(hasMinigame)
+        { minigameComponent = transform.GetChild(0).GetComponent<Minigame>(); }
     }
 
     // Update is called once per frame
@@ -52,39 +64,58 @@ public class ComputerComponent : MonoBehaviour
     {
     }
 
+    private void OnMouseDown()
+    {
+        if (hasMinigame)
+        {
+            if (canHover)
+            { animator.SetBool("isInFocus", false); }
+
+            if (userInterfaceGameObject != null)
+            {
+                userInterfaceGameObject.DisplayComputerComponentName("Computer Component");
+                userInterfaceGameObject.SetUserIntefaceActive(userInterfaceGameObject.computerComponentUI, false);
+            }
+
+            isInMinigame = true;
+
+            transform.GetChild(0).GetComponent<Minigame>().SetMinigame(componentName); 
+        }
+    }
+
     private void OnMouseEnter()
     {
+        if ((canBeHighlighted && !isInMinigame) || highlightOverwrite)
+        { componentRenderer.material.SetColor("_EmissionColor", new Color(0.32f, 0.32f, 0.32f)); }
 
-        if (canBeHighlighted)
-        { componentRenderer.material.SetColor("_EmissionColor", new Color(0.16f, 0.16f, 0.16f)); }
+        if(!isInMinigame)
+        {
+            if (canHover)
+            { animator.SetBool("isInFocus", true); }
 
-        userInterfaceGameObject.DisplayComputerComponentName(componentName);
-        userInterfaceGameObject.SetUserIntefaceActive(userInterfaceGameObject.computerComponentUI, true);
+            if (userInterfaceGameObject != null)
+            {
+                userInterfaceGameObject.DisplayComputerComponentName(componentName);
+                userInterfaceGameObject.SetUserIntefaceActive(userInterfaceGameObject.computerComponentUI, true);
+            }
+        }
     }
 
     private void OnMouseExit()
     {
-        if (canBeHighlighted)
+        if ((canBeHighlighted && !isInMinigame) || highlightOverwrite)
         { componentRenderer.material.SetColor("_EmissionColor", new Color(0f, 0f, 0f)); }
 
-        if (canHover)
+        if(!isInMinigame)
         {
+            if (canHover)
+            { animator.SetBool("isInFocus", false); }
 
-        }
-
-        userInterfaceGameObject.DisplayComputerComponentName("Computer Component");
-        userInterfaceGameObject.SetUserIntefaceActive(userInterfaceGameObject.computerComponentUI, false);
-    }
-
-    private void OnMouseOver()
-    {
-        if (canHover)
-        {
-            transform.position += Vector3.Lerp(transform.position, Vector3.up * 10f,Time.deltaTime);
-            //if (Mathf.Abs(originalTransform.position.y - transform.position.y) > 10f)
-            //{ transform.position += Vector3.down * Time.deltaTime; }
-            //else if (Mathf.Abs(originalTransform.position.y - transform.position.y) > 10f)
-            //{ transform.position += Vector3.up * Time.deltaTime; }
+            if (userInterfaceGameObject != null)
+            {
+                userInterfaceGameObject.DisplayComputerComponentName("Computer Component");
+                userInterfaceGameObject.SetUserIntefaceActive(userInterfaceGameObject.computerComponentUI, false);
+            }
         }
     }
 }
